@@ -7,59 +7,45 @@ from tingshulou.utils import httptools
 
 # 最大重试次数
 retry_download_time = 5
-# 当前重试次数
-count_retry_download_time = 0
 
 
 def download_file(f_url, f_path):
-
-    r = httptools.get_file(f_url)
 
     now_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
     print(title + file_name.__str__().zfill(4) + "   开始下载" + "时间 " + now_time)
 
-    if os.path.exists(file_path):
+    if os.path.exists(f_path):
         print("文件已经存在!")
     else:
         print("文件正在下载中!")
-        with open(f_path, 'wb') as f:
-            for chunk in r.iter_content(chunk_size=1024 * 1024):
-                if chunk:
-                    f.write(chunk)
-        time.sleep(10)
-
+        time.sleep(20)
+        if httptools.get_file(f_url, f_path):
+            now_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            print(title + file_name.__str__().zfill(4) + "   下载完毕" + "时间 " + now_time + "\n")
     if os.path.getsize(f_path) == 0:
-
-        os.remove(f_path)
-
-        global retry_download_time
-        retry_download_time -= 1
-        if retry_download_time != 0:
-            global count_retry_download_time
-            count_retry_download_time += 1
-            print("文件下载失败，正在重试, 第 " + count_retry_download_time.__str__() + " 次！")
-            download_file(f_url, f_path)
-
-    retry_download_time = 5
-    count_retry_download_time = 1
-
-    now_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    print(title + file_name.__str__().zfill(4) + "   下载完毕" + "时间 " + now_time + "\n")
+        for i in range(1, retry_download_time):
+            print("文件下载失败，第" + i.__str__() + "次尝试")
+            if os.path.exists(path=f_path):
+                os.remove(f_path)
+            time.sleep(20)
+            if httptools.get_file(f_url, f_path):
+                now_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                print(title + file_name.__str__().zfill(4) + "   下载完毕" + "时间 " + now_time + "\n")
+                break
+            else:
+                print("文件下载失败，第" + i.__str__() + "次尝试失败")
+                if i == 5:
+                    print("尝试次数过多，跳过下载！")
 
 
 if __name__ == "__main__":
 
     index = input("请输入听书楼编码：")
-
     host = "http://www.tingshulou.com"
-
     url = host + "/book/" + index.__str__() + ".html"
-
     html = httptools.get(url)
-
     soup = BeautifulSoup(html, 'html.parser')
-
     title = soup.find('h1').get_text()
 
     start = input("将要下载的小说是：" + title + "?(Y/N)")
